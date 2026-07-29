@@ -1,0 +1,12 @@
+services:
+  mt-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      TRANSLATION__PROVIDER: Local
+      RATELIMIT__PERMITLIMIT: 60
+      RATELIMIT__WINDOWSECONDS: 60

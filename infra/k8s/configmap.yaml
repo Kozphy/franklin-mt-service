@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: franklin-mt-service
+  namespace: franklin-mt
+data:
+  ASPNETCORE_ENVIRONMENT: Production
+  TRANSLATION__PROVIDER: Azure
+  TRANSLATION__MAXTEXTLENGTH: "5000"
+  TRANSLATION__CACHETTLMINUTES: "60"
+  TRANSLATION__MAXCACHEENTRIES: "10000"
+  TRANSLATION__REQUESTTIMEOUTSECONDS: "10"
+  TRANSLATION__RETRYCOUNT: "2"
+  RATELIMIT__PERMITLIMIT: "120"
+  RATELIMIT__WINDOWSECONDS: "60"
+  AZURETRANSLATOR__ENDPOINT: https://api.cognitive.microsofttranslator.com

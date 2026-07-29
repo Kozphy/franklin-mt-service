@@ -1,0 +1,88 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  buildConfiguration: Release
+  dotnetSdkVersion: 8.0.x
+  containerRepository: franklin-mt-service
+  imageTag: $(Build.BuildId)
+
+stages:
+  - stage: Validate
+    displayName: Build and validate
+    jobs:
+      - job: Build
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UseDotNet@2
+            displayName: Use .NET SDK
+            inputs:
+              packageType: sdk
+              version: $(dotnetSdkVersion)
+
+          - task: DotNetCoreCLI@2
+            displayName: Restore
+            inputs:
+              command: restore
+              projects: Franklin.MtService.sln
+
+          - task: DotNetCoreCLI@2
+            displayName: Build
+            inputs:
+              command: build
+              projects: Franklin.MtService.sln
+              arguments: --configuration $(buildConfiguration) --no-restore
+
+          - script: >
+              dotnet run
+              --project tests/Franklin.MtService.Specs
+              --configuration $(buildConfiguration)
+              --no-build
+            displayName: Run executable specifications
+
+          - task: DotNetCoreCLI@2
+            displayName: Publish API
+            inputs:
+              command: publish
+              publishWebProjects: false
+              projects: src/Franklin.MtService/Franklin.MtService.csproj
+              arguments: >
+                --configuration $(buildConfiguration)
+                --no-build
+                --output $(Build.ArtifactStagingDirectory)/app
+              zipAfterPublish: true
+
+          - publish: $(Build.ArtifactStagingDirectory)/app
+            artifact: app
+
+  - stage: Package
+    displayName: Build container
+    dependsOn: Validate
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - job: Container
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: Docker@2
+            displayName: Build and push image
+            inputs:
+              command: buildAndPush
+              containerRegistry: $(dockerRegistryServiceConnection)
+              repository: $(containerRepository)
+              dockerfile: Dockerfile
+              buildContext: .
+              tags: |
+                $(imageTag)
+                latest
+
+          - publish: infra/k8s
+            artifact: kubernetes-manifests

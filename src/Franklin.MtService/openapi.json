@@ -1,0 +1,283 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Franklin Machine Translation Service",
+    "version": "1.0.0",
+    "description": "Versioned API for creating and retrieving machine translations."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ],
+  "paths": {
+    "/api/v1/translations": {
+      "post": {
+        "operationId": "createTranslation",
+        "summary": "Translate text",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Correlation-ID",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Translation created",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "429": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/translations/{id}": {
+      "get": {
+        "operationId": "getTranslation",
+        "summary": "Retrieve a non-expired translation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Translation found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/languages": {
+      "get": {
+        "operationId": "listLanguages",
+        "summary": "List common supported language codes",
+        "responses": {
+          "200": {
+            "description": "Language catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LanguageInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "operationId": "getServiceStatus",
+        "summary": "Read lightweight operational counters",
+        "responses": {
+          "200": {
+            "description": "Service status"
+          }
+        }
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "getLiveness",
+        "summary": "Process liveness",
+        "responses": {
+          "200": {
+            "description": "Process is live"
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "getReadiness",
+        "summary": "Provider readiness",
+        "responses": {
+          "200": {
+            "description": "Service is ready"
+          },
+          "503": {
+            "description": "Service is not ready"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TranslationRequest": {
+        "type": "object",
+        "required": [
+          "text",
+          "targetLanguage"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000,
+            "example": "Hello world"
+          },
+          "sourceLanguage": {
+            "type": "string",
+            "nullable": true,
+            "example": "en"
+          },
+          "targetLanguage": {
+            "type": "string",
+            "example": "es"
+          }
+        }
+      },
+      "TranslationResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "sourceText",
+          "translatedText",
+          "targetLanguage",
+          "provider",
+          "cached",
+          "createdAt",
+          "expiresAt",
+          "durationMilliseconds"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceText": {
+            "type": "string"
+          },
+          "translatedText": {
+            "type": "string"
+          },
+          "sourceLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "targetLanguage": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "cached": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMilliseconds": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "LanguageInfo": {
+        "type": "object",
+        "required": [
+          "code",
+          "name"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Problem Details error",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "integer"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "traceId": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
