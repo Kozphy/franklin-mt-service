@@ -8,7 +8,6 @@ namespace Franklin.MtService.Providers;
 public sealed class ResilientTranslationProvider(
     ITranslationProvider inner,
     TranslationOptions options,
-    TimeProvider timeProvider,
     ILogger<ResilientTranslationProvider> logger) : ITranslationProvider
 {
     private readonly object _circuitLock = new();
@@ -107,7 +106,7 @@ public sealed class ResilientTranslationProvider(
                 return;
             }
 
-            var now = timeProvider.GetUtcNow();
+            var now = TimeProvider.System.GetUtcNow();
             if (now >= _circuitOpenUntil.Value)
             {
                 _circuitOpenUntil = null;
@@ -142,7 +141,7 @@ public sealed class ResilientTranslationProvider(
                 return;
             }
 
-            _circuitOpenUntil = timeProvider.GetUtcNow()
+            _circuitOpenUntil = TimeProvider.System.GetUtcNow()
                 .AddSeconds(options.CircuitBreakerBreakSeconds);
             logger.LogError(
                 "Translation provider circuit opened for {Provider} until {OpenUntil} after {FailureCount} consecutive failures.",
